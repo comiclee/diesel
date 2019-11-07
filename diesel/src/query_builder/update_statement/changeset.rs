@@ -4,6 +4,7 @@ use expression::AppearsOnTable;
 use query_builder::*;
 use query_source::{Column, QuerySource};
 use result::QueryResult;
+use std::marker::PhantomData;
 
 /// Types which can be passed to
 /// [`update.set`](struct.UpdateStatement.html#method.set).
@@ -53,6 +54,30 @@ where
             _column: self.left,
             expr: self.right,
         }
+    }
+}
+
+impl<'a, T: AsChangeset> AsChangeset for &'a [T] {
+    type Target = T::Target;
+    type Changeset = crate::insertable::BatchInsert<'a, T, Self::Target>;
+
+    fn as_changeset(self) -> Self::Changeset {
+        crate::insertable::BatchInsert {
+            records: self,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<'a, T: AsChangeset> AsChangeset for &'a Vec<T>
+    where
+        &'a [T]: AsChangeset,
+{
+    type Target = T::Target;
+    type Changeset = <&'a [T] as AsChangeset>::Changeset;
+
+    fn as_changeset(self) -> Self::Changeset {
+        (&**self).as_changeset()
     }
 }
 

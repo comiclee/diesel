@@ -5,7 +5,12 @@ use super::{IncompleteInsertStatement, IntoUpdateTarget, SelectStatement, SqlQue
 use dsl::Select;
 use expression::Expression;
 use query_dsl::methods::SelectDsl;
-
+#[cfg(feature = "sqlite")]
+use log::warn;
+#[cfg(feature = "sqlite")]
+use super::super::sqlite::is_readonly_tx;
+#[cfg(feature = "sqlite")]
+use std::borrow::Borrow;
 /// Creates an `UPDATE` statement.
 ///
 /// When a table is passed to `update`, every row in the table will be updated.
@@ -77,6 +82,11 @@ use query_dsl::methods::SelectDsl;
 /// # fn main() {}
 /// ```
 pub fn update<T: IntoUpdateTarget>(source: T) -> UpdateStatement<T::Table, T::WhereClause> {
+    #[cfg(feature = "sqlite")]{
+        if is_readonly_tx(){
+            warn!("write in deferred transaction! use immediate_transaction instead")
+        }
+    }
     UpdateStatement::new(source.into_update_target())
 }
 
@@ -132,6 +142,11 @@ pub fn update<T: IntoUpdateTarget>(source: T) -> UpdateStatement<T::Table, T::Wh
 /// # }
 /// ```
 pub fn delete<T: IntoUpdateTarget>(source: T) -> DeleteStatement<T::Table, T::WhereClause> {
+    #[cfg(feature = "sqlite")]{
+        if is_readonly_tx(){
+            warn!("write in deferred transaction! use immediate_transaction instead")
+        }
+    }
     let target = source.into_update_target();
     DeleteStatement::new(target.table, target.where_clause)
 }
@@ -311,6 +326,11 @@ pub fn delete<T: IntoUpdateTarget>(source: T) -> DeleteStatement<T::Table, T::Wh
 /// # fn main() {}
 /// ```
 pub fn insert_into<T>(target: T) -> IncompleteInsertStatement<T, Insert> {
+    #[cfg(feature = "sqlite")]{
+        if is_readonly_tx(){
+            warn!("write in deferred transaction! use immediate_transaction instead")
+        }
+    }
     IncompleteInsertStatement::new(target, Insert)
 }
 
@@ -363,6 +383,11 @@ pub fn insert_into<T>(target: T) -> IncompleteInsertStatement<T, Insert> {
 /// # }
 /// ```
 pub fn insert_or_ignore_into<T>(target: T) -> IncompleteInsertStatement<T, InsertOrIgnore> {
+    #[cfg(feature = "sqlite")]{
+        if is_readonly_tx(){
+            warn!("write in deferred transaction! use immediate_transaction instead")
+        }
+    }
     IncompleteInsertStatement::new(target, InsertOrIgnore)
 }
 
@@ -414,6 +439,11 @@ where
 /// # }
 /// # #[cfg(feature = "postgres")] fn main() {}
 pub fn replace_into<T>(target: T) -> IncompleteInsertStatement<T, Replace> {
+    #[cfg(feature = "sqlite")]{
+        if is_readonly_tx(){
+            warn!("write in deferred transaction! use immediate_transaction instead")
+        }
+    }
     IncompleteInsertStatement::new(target, Replace)
 }
 

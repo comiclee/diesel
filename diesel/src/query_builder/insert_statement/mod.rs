@@ -240,6 +240,55 @@ where
     }
 }
 
+use diesel::upsert::on_conflict_clause::OnConflictValues;
+use diesel::upsert::on_conflict_actions::DoUpdate;
+#[cfg(feature = "sqlite")]
+impl<'a, T, U, Op, Target, As, Ret> ExecuteDsl<SqliteConnection> for InsertStatement<T, OnConflictValues<BatchInsert<'a, U, T>, Target, DoUpdate<BatchInsert<'a, As, T>>>, Op, Ret>
+    where
+        &'a U: Insertable<T>,
+        &'a As: AsChangeset,
+        InsertStatement<T, OnConflictValues<<&'a U as Insertable<T>>::Values, Target, DoUpdate<<&'a As as AsChangeset>::Changeset>>, Op, Ret>: QueryFragment<Sqlite>,
+        T: Copy,
+        Target: Copy,
+        Op: Copy,
+        Ret: Copy,
+{
+    fn execute(query: Self, conn: &SqliteConnection) -> QueryResult<usize> {
+        // query: InsertStatement
+        // query.records: OnConflictValues
+        // query.records.values: OnConflictValues::Values=BatchInsert<'a, U, T>
+        // query.records.values.records: &'a [U]
+        let insertables = query.records.values.records;
+        // query.records.action: OnConflictValues::Action=DoUpdate<BatchInsert<'a, As, T>>
+        // query.records.action.changeset: BatchInsert<'a, As, T>
+        // query.records.action.changeset.records: &'a [As]
+        let changesets = query.records.action.changeset.records;
+        let insertables_len = insertables.len();
+        let changesets_len = changesets.len();
+        if insertables_len != changesets_len {
+            use result::Error::QueryBuilderError;
+            return Err(QueryBuilderError(format!("insertables num: {} is unequal to changesets num: {}", insertables_len, changesets_len).into()));
+        }
+
+        use connection::Connection;
+        conn.transaction(|| {
+            let mut result = 0;
+            let mut i = 0;
+            for record in insertables {
+                let changeset = &changesets[i];
+                result += InsertStatement::new(
+                    query.target,
+                    OnConflictValues::new(record.values(), query.records.target, DoUpdate::new(changeset.as_changeset())),
+                    query.operator,
+                    query.returning,
+                ).execute(conn)?;
+                i += 1;
+            }
+            Ok(result)
+        })
+    }
+}
+
 #[cfg(feature = "sqlite")]
 impl<T, U, Op> ExecuteDsl<SqliteConnection>
     for InsertStatement<T, OwnedBatchInsert<ValuesClause<U, T>>, Op>

@@ -8,9 +8,9 @@ use result::QueryResult;
 #[doc(hidden)]
 #[derive(Debug, Clone, Copy)]
 pub struct OnConflictValues<Values, Target, Action> {
-    values: Values,
-    target: Target,
-    action: Action,
+    pub(crate) values: Values,
+    pub(crate) target: Target,
+    pub(crate) action: Action,
 }
 
 impl<Values> OnConflictValues<Values, NoConflictTarget, DoNothing> {

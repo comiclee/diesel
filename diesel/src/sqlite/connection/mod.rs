@@ -27,6 +27,11 @@ use serialize::ToSql;
 use sql_types::HasSqlType;
 use sqlite::Sqlite;
 
+use std::cell::RefCell;
+use std::borrow::BorrowMut;
+thread_local! {
+    pub static ROTX: RefCell<bool> = RefCell::new(false);
+}
 /// Connections for the SQLite backend. Unlike other backends, "connection URLs"
 /// for SQLite are file paths, [URIs](https://sqlite.org/uri.html), or special
 /// identifiers like `:memory:`.
@@ -36,6 +41,23 @@ pub struct SqliteConnection {
     raw_connection: Rc<RawConnection>,
     transaction_manager: AnsiTransactionManager,
     on_execute: Option<Box<Fn(&SqliteConnection, &str)>>,
+}
+
+struct ReadonlyTx{}
+impl ReadonlyTx{
+    fn new(){
+        ROTX.with(|ro| { *ro.borrow_mut() = true; });
+    }
+}
+impl Drop for ReadonlyTx{
+    fn drop(&mut self) {
+        ROTX.with(|ro| { *ro.borrow_mut() = false; });
+    }
+}
+pub fn is_readonly_tx() -> bool{
+    ROTX.with(|ro| {
+        return *ro.borrow();
+    })
 }
 
 // This relies on the invariant that RawConnection or Statement are never
@@ -65,6 +87,26 @@ impl Connection for SqliteConnection {
                 on_execute: None
             }
         })
+    }
+
+    fn transaction<T, E, F>(&self, f: F) -> Result<T, E>
+        where
+            F: FnOnce() -> Result<T, E>,
+            E: From<Error>,
+    {
+        let _ro_flag = ReadonlyTx::new();
+        let transaction_manager = self.transaction_manager();
+        try!(transaction_manager.begin_transaction(self));
+        match f() {
+            Ok(value) => {
+                try!(transaction_manager.commit_transaction(self));
+                Ok(value)
+            }
+            Err(e) => {
+                try!(transaction_manager.rollback_transaction(self));
+                Err(e)
+            }
+        }
     }
 
     #[doc(hidden)]

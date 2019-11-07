@@ -266,7 +266,7 @@ where
 #[derive(Debug, Clone, Copy)]
 pub struct BatchInsert<'a, T: 'a, Tab> {
     pub(crate) records: &'a [T],
-    _marker: PhantomData<Tab>,
+    pub(crate) _marker: PhantomData<Tab>,
 }
 
 impl<'a, T, Tab, Inner, DB> QueryFragment<DB> for BatchInsert<'a, T, Tab>

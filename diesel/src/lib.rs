@@ -159,6 +159,9 @@ extern crate diesel_derives;
 #[doc(hidden)]
 pub use diesel_derives::*;
 
+#[cfg(feature = "sqlite")]
+extern crate log;
+
 #[macro_use]
 mod macros;
 

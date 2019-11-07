@@ -14,6 +14,7 @@ use std::sync::Arc;
 pub use self::backend::{Sqlite, SqliteType};
 pub use self::connection::SqliteConnection;
 pub use self::query_builder::SqliteQueryBuilder;
+pub use self::connection::is_readonly_tx;
 
 pub trait ErrorHook {
     fn on_error(&self, code: i32);

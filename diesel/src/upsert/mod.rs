@@ -4,8 +4,8 @@
 //! See [the methods on `InsertStatement`](../../query_builder/struct.InsertStatement.html#impl-1)
 //! for usage examples.
 
-mod on_conflict_actions;
-mod on_conflict_clause;
+pub(crate) mod on_conflict_actions;
+pub(crate) mod on_conflict_clause;
 mod on_conflict_extension;
 mod on_conflict_target;
 

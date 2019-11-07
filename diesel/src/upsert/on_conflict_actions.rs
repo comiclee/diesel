@@ -26,7 +26,7 @@ where
 #[doc(hidden)]
 #[derive(Debug, Clone, Copy)]
 pub struct DoUpdate<T> {
-    changeset: T,
+    pub(crate) changeset: T,
 }
 
 impl<T> DoUpdate<T> {
