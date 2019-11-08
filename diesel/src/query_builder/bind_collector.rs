@@ -23,6 +23,10 @@ pub trait BindCollector<DB: Backend> {
     where
         DB: HasSqlType<T>,
         U: ToSql<T, DB>;
+
+    fn push_is_value_none(&mut self, _column_name: String, _sql_type: DB::TypeMetadata, _is_none: bool) {
+
+    }
 }
 
 #[derive(Debug)]
@@ -40,6 +44,8 @@ pub struct RawBytesBindCollector<DB: Backend + TypeMetadata> {
     ///
     /// This vec is guaranteed to be the same length as `metadata`.
     pub binds: Vec<Option<Vec<u8>>>,
+
+    pub value_is_none: Vec<(String, DB::TypeMetadata, bool)>,
 }
 
 #[cfg_attr(feature = "cargo-clippy", allow(new_without_default_derive))]
@@ -49,6 +55,7 @@ impl<DB: Backend + TypeMetadata> RawBytesBindCollector<DB> {
         RawBytesBindCollector {
             metadata: Vec::new(),
             binds: Vec::new(),
+            value_is_none: Vec::new(),
         }
     }
 }
@@ -73,5 +80,9 @@ impl<DB: Backend + TypeMetadata> BindCollector<DB> for RawBytesBindCollector<DB>
         }
         self.metadata.push(metadata);
         Ok(())
+    }
+
+    fn push_is_value_none(&mut self, column_name: String, sql_type: DB::TypeMetadata, is_none: bool) {
+        self.value_is_none.push((column_name, sql_type, is_none));
     }
 }

@@ -182,9 +182,7 @@ where
     Self: QueryFragment<Sqlite>,
 {
     fn column_names(&self, mut out: AstPass<Sqlite>) -> QueryResult<()> {
-        if let ColumnInsertValue::Expression(..) = *self {
-            out.push_identifier(Col::NAME)?;
-        }
+        out.push_identifier(Col::NAME)?;
         Ok(())
     }
 }
@@ -192,11 +190,19 @@ where
 #[cfg(feature = "sqlite")]
 impl<Col, Expr> QueryFragment<Sqlite> for ColumnInsertValue<Col, Expr>
 where
+    Col: Column,
     Expr: QueryFragment<Sqlite>,
+    Sqlite: crate::sql_types::HasSqlType<Col::SqlType>,
 {
     fn walk_ast(&self, mut out: AstPass<Sqlite>) -> QueryResult<()> {
+        let sql_type: crate::sqlite::SqliteType = <Sqlite as crate::sql_types::HasSqlType<Col::SqlType>>::metadata(&());
+        let column_name = Col::NAME.to_string();
         if let ColumnInsertValue::Expression(_, ref value) = *self {
             value.walk_ast(out.reborrow())?;
+            out.push_is_value_none(column_name, sql_type, false);
+        } else {
+            out.push_sql("?");
+            out.push_is_value_none(column_name, sql_type, true);
         }
         Ok(())
     }

@@ -180,7 +180,7 @@ where
     Ret: QueryFragment<DB>,
 {
     fn walk_ast(&self, mut out: AstPass<DB>) -> QueryResult<()> {
-        out.unsafe_to_cache_prepared();
+//        out.unsafe_to_cache_prepared();
 
         if self.records.rows_to_insert() == Some(0) {
             out.push_sql("SELECT 1 FROM ");

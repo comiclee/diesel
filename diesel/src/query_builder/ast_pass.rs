@@ -211,6 +211,17 @@ where
         Ok(())
     }
 
+    pub fn push_is_value_none(&mut self, column_name: String, sql_type: DB::TypeMetadata, is_none: bool) {
+        use self::AstPassInternals::*;
+        match self.internals {
+            CollectBinds {
+                ref mut collector,
+                metadata_lookup,
+            } => collector.push_is_value_none(column_name, sql_type, is_none),
+            _ => {}
+        }
+    }
+
     #[doc(hidden)]
     pub fn push_bind_param_value_only<T, U>(&mut self, bind: &U) -> QueryResult<()>
     where

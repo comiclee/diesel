@@ -249,8 +249,19 @@ impl SqliteConnection {
         try!(source.collect_binds(&mut bind_collector, &()));
         let metadata = bind_collector.metadata;
         let binds = bind_collector.binds;
-        for (tpe, value) in metadata.into_iter().zip(binds) {
-            try!(statement.bind(tpe, value));
+        let value_is_none = bind_collector.value_is_none;
+        let mut zip_binds = metadata.into_iter().zip(binds);
+        for (column_name, tpe, is_none) in value_is_none.into_iter() {
+            // tpe: crate::sqlite::SqliteType
+            // source: InsertStatement 带有table信息
+            // value: Option<Vec<u8>>，应该default值，如果没有设default值，那就取None
+            if is_none {
+                let value = None; //Some("test".as_bytes().iter().cloned().collect());
+                try!(statement.bind(tpe, value));
+            } else {
+                let (tpe, value) = zip_binds.next().unwrap();
+                try!(statement.bind(tpe, value));
+            }
         }
 
         Ok(statement)
